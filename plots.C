@@ -560,6 +560,7 @@ void read(std::string filename, float minbycat, int ndays, int var)
     Ratio_vs_time[8]->GetXaxis()->SetLabelSize(0.03);
     Ratio_vs_time[8]->GetYaxis()->SetLabelSize(0.03);
     Ratio_vs_time[8]->GetXaxis()->SetNdivisions(-507);
+    Ratio_vs_time[8]->GetYaxis()->SetRangeUser(0,20);
     Ratio_vs_time[8]->GetYaxis()->SetTitle("Augmentation du risque d'admissions (nonvax/vax)");
     Ratio_vs_time[8]->SetTitleSize(0.035);
     Ratio_vs_time[8]->SetMarkerStyle(20);
@@ -586,6 +587,7 @@ void read(std::string filename, float minbycat, int ndays, int var)
     Ratio_vs_time_raw[8]->GetXaxis()->SetLabelSize(0.03);
     Ratio_vs_time_raw[8]->GetYaxis()->SetLabelSize(0.03);
     Ratio_vs_time_raw[8]->GetXaxis()->SetNdivisions(-507);
+    Ratio_vs_time_raw[8]->GetYaxis()->SetRangeUser(0,15);
     Ratio_vs_time_raw[8]->GetYaxis()->SetTitle("Rapport du nombre d'admissions brut (nonvax/vax)");
     Ratio_vs_time_raw[8]->SetTitleSize(0.035);
     Ratio_vs_time_raw[8]->SetMarkerStyle(20);
@@ -811,6 +813,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
     Ratio_vs_age->GetYaxis()->SetLabelSize(0.03);
     Ratio_vs_age->GetXaxis()->SetNdivisions(-507);
     Ratio_vs_age->GetYaxis()->SetTitle("Age des patients");
+    Ratio_vs_age->SetMinimum(0.01);
+    Ratio_vs_age->SetMaximum(100.);
     Ratio_vs_age->SetTitleSize(0.035);
     Ratio_vs_age->SetMarkerStyle(20);
     Ratio_vs_age->Draw("colz");
@@ -835,6 +839,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
     Ratioraw_vs_age->GetXaxis()->SetLabelSize(0.03);
     Ratioraw_vs_age->GetYaxis()->SetLabelSize(0.03);
     Ratioraw_vs_age->GetXaxis()->SetNdivisions(-507);
+    Ratioraw_vs_age->SetMinimum(0.01);
+    Ratioraw_vs_age->SetMaximum(100.);
     Ratioraw_vs_age->GetYaxis()->SetTitle("Age des patients");
     Ratioraw_vs_age->SetTitleSize(0.035);
     Ratioraw_vs_age->SetMarkerStyle(20);
