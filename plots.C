@@ -484,6 +484,7 @@ void read(std::string filename, float minbycat, int ndays, int var)
   }
 
   int age_r[5] = {50,90,10,30,70};
+  char buffer[80];
     
   for (int i=0;i<5;++i)
       doRatioPlot(&totaldata[10*i+7],&totaldata[10*i+6],Ratio_vs_time[i],Ratio_vs_time_raw[i],age_r[i],Ratio_vs_age,Ratioraw_vs_age,tmin,tmax,ndays);
@@ -539,7 +540,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
   leg->Draw();
     
   c1->Update();
-    
+  sprintf(buffer,"Admission_risk_per_age_%d.png",var);
+  c1->SaveAs(buffer);
     
     TCanvas *c11 = new TCanvas("c11","Augmentation du risque d'admissions (nonvax/vax)",451,208,1208,604);
     c11->SetFillColor(0);
@@ -564,8 +566,10 @@ void read(std::string filename, float minbycat, int ndays, int var)
     Ratio_vs_time[8]->Draw();
       
     c11->Update();
-
-    TCanvas *c11b = new TCanvas("c11b","Rapport du nombre d'admissions (nonvax/vax)",451,208,1208,604);
+    sprintf(buffer,"Admission_risk_overall_%d.png",var);
+    c11->SaveAs(buffer);
+    
+    TCanvas *c11b = new TCanvas("c11b","Rapport du nombre d'admissions brut (nonvax/vax)",451,208,1208,604);
     c11b->SetFillColor(0);
     c11b->SetBorderMode(0);
     c11b->SetGridx();
@@ -582,13 +586,14 @@ void read(std::string filename, float minbycat, int ndays, int var)
     Ratio_vs_time_raw[8]->GetXaxis()->SetLabelSize(0.03);
     Ratio_vs_time_raw[8]->GetYaxis()->SetLabelSize(0.03);
     Ratio_vs_time_raw[8]->GetXaxis()->SetNdivisions(-507);
-    Ratio_vs_time_raw[8]->GetYaxis()->SetTitle("Rapport du nombre d'admissions (nonvax/vax)");
+    Ratio_vs_time_raw[8]->GetYaxis()->SetTitle("Rapport du nombre d'admissions brut (nonvax/vax)");
     Ratio_vs_time_raw[8]->SetTitleSize(0.035);
     Ratio_vs_time_raw[8]->SetMarkerStyle(20);
     Ratio_vs_time_raw[8]->Draw();
       
     c11b->Update();
-    
+    sprintf(buffer,"Admission_ratio_overall_%d.png",var);
+    c11b->SaveAs(buffer);
     
   TCanvas *c3 = new TCanvas("c3","Non-vaccines, donnees par millions d'habitants ",451,208,1208,604);
   c3->SetFillColor(0);
@@ -622,7 +627,7 @@ void read(std::string filename, float minbycat, int ndays, int var)
   SC_vs_time[6]->GetXaxis()->SetLabelSize(0.03);
   SC_vs_time[6]->GetYaxis()->SetLabelSize(0.03);
   SC_vs_time[6]->GetXaxis()->SetNdivisions(-507);
-  SC_vs_time[6]->GetYaxis()->SetTitle("Nombre moyen d'admissions par jour (par millions d'habitants)");
+  SC_vs_time[6]->GetYaxis()->SetTitle("Taux moyen d'admissions par jour (par millions d'habitants)");
   SC_vs_time[6]->SetTitleSize(0.035);
   SC_vs_time[6]->SetMarkerStyle(20);
   SC_vs_time[6]->Draw();
@@ -636,7 +641,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
   leg3->Draw();
     
   c3->Update();
- 
+  sprintf(buffer,"Average_admission_rate_per_age_nonvax_%d.png",var);
+  c3->SaveAs(buffer);
     
   TCanvas *c4 = new TCanvas("c4","Non vaccines, données brutes",451,208,1208,604);
   c4->SetFillColor(0);
@@ -684,7 +690,9 @@ void read(std::string filename, float minbycat, int ndays, int var)
     leg4->Draw();
       
     c4->Update();
-
+    sprintf(buffer,"Average_admission_per_age_nonvax_%d.png",var);
+    c4->SaveAs(buffer);
+    
     TCanvas *c7 = new TCanvas("c7","Schema vaccinal complet, donnees brutes",451,208,1208,604);
     c7->SetFillColor(0);
     c7->SetBorderMode(0);
@@ -731,7 +739,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
     
     leg7->Draw();
     c7->Update();
-    
+    sprintf(buffer,"Average_admission_per_age_vax_%d.png",var);
+    c7->SaveAs(buffer);
     
     TCanvas *c8 = new TCanvas("c8","Schema vaccinal complet, donnees par millions d'habitants",451,208,1208,604);
       c8->SetFillColor(0);
@@ -765,7 +774,7 @@ void read(std::string filename, float minbycat, int ndays, int var)
       SC_vs_time[7]->GetXaxis()->SetLabelSize(0.03);
       SC_vs_time[7]->GetYaxis()->SetLabelSize(0.03);
       SC_vs_time[7]->GetXaxis()->SetNdivisions(-507);
-      SC_vs_time[7]->GetYaxis()->SetTitle("Nombre moyen d'admissions par jour (par millions d'habitants)");
+      SC_vs_time[7]->GetYaxis()->SetTitle("Taux moyen d'admissions par jour (par millions d'habitants)");
       SC_vs_time[7]->SetTitleSize(0.035);
       SC_vs_time[7]->SetMarkerStyle(20);
       SC_vs_time[7]->Draw();
@@ -779,11 +788,12 @@ void read(std::string filename, float minbycat, int ndays, int var)
       leg8->Draw();
         
       c8->Update();
-
+      sprintf(buffer,"Average_admission_rate_per_age_vax_%d.png",var);
+      c8->SaveAs(buffer);
      
     gStyle->SetPalette(55);
     gStyle->SetNumberContours(256);
-    TCanvas *c9 = new TCanvas("c9","Rapports normalisé par millions d'habitants non-vax/vax en fonction de l'age pour la variable",451,208,1208,604);
+    TCanvas *c9 = new TCanvas("c9","Rapports normalisé par millions d'habitants non-vax/vax en fonction de l'age",451,208,1208,604);
     c9->SetFillColor(0);
     c9->SetBorderMode(0);
     c9->SetBorderSize(2);
@@ -806,8 +816,10 @@ void read(std::string filename, float minbycat, int ndays, int var)
     Ratio_vs_age->Draw("colz");
     
     c9->Update();
+    sprintf(buffer,"Average_admission_rate_vs_age_overall_%d.png",var);
+    c9->SaveAs(buffer);
     
-    TCanvas *c10 = new TCanvas("c10","Rapports bruts non-vax/vax en fonction de l'age pour la variable",451,208,1208,604);
+    TCanvas *c10 = new TCanvas("c10","Rapports bruts non-vax/vax",451,208,1208,604);
     c10->SetFillColor(0);
     c10->SetBorderMode(0);
     c10->SetBorderSize(2);
@@ -829,6 +841,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
     Ratioraw_vs_age->Draw("colz");
     
     c10->Update();
+    sprintf(buffer,"Average_admission_vs_age_overall_%d.png",var);
+    c10->SaveAs(buffer);
 }
 
 
