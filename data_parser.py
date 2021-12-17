@@ -55,7 +55,7 @@ for line in data:
         bunch.append(mydate)
         dates.append(mydate)
         for i in range(5):
-            results=np.zeros(50)
+            results=np.zeros(70)
             bunch.append(results)
         data_by_date.append(bunch)
 
@@ -79,23 +79,29 @@ for line in data:
     HOPCR=-1
     SC=-1.
     SCPCR=-1.
+    DC=-1.
+    DCPCR=-1.
     
-    for i in range(5):
-        data_by_date[idx][idx_age+1][5*idx_vax+i]=-1
+    for i in range(7):
+        data_by_date[idx][idx_age+1][7*idx_vax+i]=-1
     
     # Normalisation par millions d'habitants
     # On supprime dès le départ les points avec mons de 10000 personnes
-    if float(info[9])>=10000:
-        HO=float(info[5])/(float(info[9])/1000000.)
-        HOPCR=float(info[6])/(float(info[9])/1000000.)
-        SC=float(info[7])/(float(info[9])/1000000.)
-        SCPCR=float(info[8])/(float(info[9])/1000000.)
-
-    data_by_date[idx][idx_age+1][5*idx_vax]=HO
-    data_by_date[idx][idx_age+1][5*idx_vax+1]=HOPCR
-    data_by_date[idx][idx_age+1][5*idx_vax+2]=SC
-    data_by_date[idx][idx_age+1][5*idx_vax+3]=SCPCR
-    data_by_date[idx][idx_age+1][5*idx_vax+4]=float(info[9])/1000000.
+    if float(info[13])>=10000:
+        HO=float(info[7])/(float(info[13])/1000000.)
+        HOPCR=float(info[8])/(float(info[13])/1000000.)
+        SC=float(info[9])/(float(info[13])/1000000.)
+        SCPCR=float(info[10])/(float(info[13])/1000000.)
+        DC=float(info[11])/(float(info[13])/1000000.)
+        DCPCR=float(info[12])/(float(info[13])/1000000.)
+        
+    data_by_date[idx][idx_age+1][7*idx_vax]=HO
+    data_by_date[idx][idx_age+1][7*idx_vax+1]=HOPCR
+    data_by_date[idx][idx_age+1][7*idx_vax+2]=SC
+    data_by_date[idx][idx_age+1][7*idx_vax+3]=SCPCR
+    data_by_date[idx][idx_age+1][7*idx_vax+4]=DC
+    data_by_date[idx][idx_age+1][7*idx_vax+5]=DCPCR
+    data_by_date[idx][idx_age+1][7*idx_vax+6]=float(info[13])/1000000.
 
 # A la fin on remplit le fichier texte
 

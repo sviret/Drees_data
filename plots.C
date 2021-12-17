@@ -249,6 +249,8 @@ void write(const TString& filename)
     double HOp=0;
     double SC=0;
     double SCp=0;
+    double DC=0;
+    double DCp=0;
     double pop=0;
     
     tree->Branch("date_o",&date,"date_o/D");  // Date (en secondes)
@@ -258,6 +260,8 @@ void write(const TString& filename)
     tree->Branch("HOp_o",&HOp,"HOp_o/D");     // Hospitalisation avec PCR+
     tree->Branch("SC_o",&SC,"SC_o/D");        // Soins critiques
     tree->Branch("SCp_o",&SCp,"SCp_o/D");     // Soins critiques avec PCR+
+    tree->Branch("DC_o",&DC,"DC_o/D");        // Décès
+    tree->Branch("DCp_o",&DCp,"DCp_o/D");     // Décès avec PCR+
     tree->Branch("pop_o",&pop,"pop_o/D");     // Population dans la catégorie (en millions)
 
     /*
@@ -282,8 +286,12 @@ void write(const TString& filename)
      2 = [0,19]               // Pas consideré
      3 = [20,39]
      4 = [60,79]
+     
+     Peuvent changer selon le fichier csv à mettre au point
      */
     
+    int vac_code[9]={7,3,5,6,8,2,4,1,0};
+    int age_code[5]={2,3,0,4,1};
         
     ifstream in(filename);
     if (!in) return;
@@ -304,11 +312,18 @@ void write(const TString& filename)
         else
         {
             age=int((compt-1)/evtlength);
-            vac=int((compt-evtlength*age-1));
+            vac=vac_code[int((compt-evtlength*age-1))];
+            //cout << compt << " /" << int((compt-evtlength*age-1)) << " / " << age <<" / " << vac << endl;
+            
+            age=age_code[int((compt-1)/evtlength)];
+            
+         
             in >> HO;
             in >> HOp;
             in >> SC;
             in >> SCp;
+            in >> DC;
+            in >> DCp;
             in >> pop;
             ++compt;
             
@@ -337,6 +352,8 @@ void write(const TString& filename)
 // -> HOp (1) : nombre de personnes hospitalisées avec test PCR+
 // -> SC  (2) : nombre de personnes en soins critiques
 // -> SCp (3) : nombre de personnes en soins critiques avec test PCR+
+// -> DC  (4) : nombre de personnes décédées
+// -> DCp (5) : nombre de personnes décédées avec test PCR+
 //
 //
 // On calcule ensuite un moyenne glissante pour chaque jour des parametres suivants:
@@ -350,7 +367,7 @@ void write(const TString& filename)
 
 void read(std::string filename, float minbycat, int ndays, int var)
 {
-  if (var<0 || var>3)
+  if (var<0 || var>5)
   {
       std::cout << "Var should be between 0 and 3 !!!";
       return;
@@ -376,6 +393,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
   if (var==1) newtree->SetBranchAddress("HOp_o",&val);
   if (var==2) newtree->SetBranchAddress("SC_o",&val);
   if (var==3) newtree->SetBranchAddress("SCp_o",&val);
+  if (var==4) newtree->SetBranchAddress("DC_o",&val);
+  if (var==5) newtree->SetBranchAddress("DCp_o",&val);
   newtree->SetBranchAddress("pop_o",&pop);
 
   int nentries=newtree->GetEntries();
@@ -526,7 +545,10 @@ void read(std::string filename, float minbycat, int ndays, int var)
   Ratio_vs_time[0]->GetXaxis()->SetLabelSize(0.03);
   Ratio_vs_time[0]->GetYaxis()->SetLabelSize(0.03);
   Ratio_vs_time[0]->GetXaxis()->SetNdivisions(-507);
-  Ratio_vs_time[0]->GetYaxis()->SetTitle("Augmentation du risque d'admission (nonvax/vax)");
+    Ratio_vs_time[0]->GetYaxis()->SetTitle("Augmentation du risque d'admission (nonvax/vax)");
+  if (var>=4)
+      Ratio_vs_time[0]->GetYaxis()->SetTitle("Augmentation du risque de deces (nonvax/vax)");
+    
   Ratio_vs_time[0]->SetTitleSize(0.035);
   Ratio_vs_time[0]->SetMarkerStyle(20);
   Ratio_vs_time[0]->Draw();
@@ -562,6 +584,9 @@ void read(std::string filename, float minbycat, int ndays, int var)
     Ratio_vs_time[8]->GetXaxis()->SetNdivisions(-507);
     Ratio_vs_time[8]->GetYaxis()->SetRangeUser(0,20);
     Ratio_vs_time[8]->GetYaxis()->SetTitle("Augmentation du risque d'admissions (nonvax/vax)");
+    if (var>=4)
+        Ratio_vs_time[8]->GetYaxis()->SetTitle("Augmentation du risque de deces (nonvax/vax)");
+    
     Ratio_vs_time[8]->SetTitleSize(0.035);
     Ratio_vs_time[8]->SetMarkerStyle(20);
     Ratio_vs_time[8]->Draw();
@@ -589,6 +614,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
     Ratio_vs_time_raw[8]->GetXaxis()->SetNdivisions(-507);
     Ratio_vs_time_raw[8]->GetYaxis()->SetRangeUser(0,15);
     Ratio_vs_time_raw[8]->GetYaxis()->SetTitle("Rapport du nombre d'admissions brut (nonvax/vax)");
+    if (var>=4)
+        Ratio_vs_time_raw[8]->GetYaxis()->SetTitle("Rapport du nombre de décès brut (nonvax/vax)");
     Ratio_vs_time_raw[8]->SetTitleSize(0.035);
     Ratio_vs_time_raw[8]->SetMarkerStyle(20);
     Ratio_vs_time_raw[8]->Draw();
@@ -630,6 +657,9 @@ void read(std::string filename, float minbycat, int ndays, int var)
   SC_vs_time[6]->GetYaxis()->SetLabelSize(0.03);
   SC_vs_time[6]->GetXaxis()->SetNdivisions(-507);
   SC_vs_time[6]->GetYaxis()->SetTitle("Taux moyen d'admissions par jour (par millions d'habitants)");
+  if (var>=4)
+      SC_vs_time[6]->GetYaxis()->SetTitle("Taux moyen de décès par jour (par millions d'habitants)");
+    
   SC_vs_time[6]->SetTitleSize(0.035);
   SC_vs_time[6]->SetMarkerStyle(20);
   SC_vs_time[6]->Draw();
@@ -679,6 +709,9 @@ void read(std::string filename, float minbycat, int ndays, int var)
     SC_vs_time_raw[6]->GetYaxis()->SetLabelSize(0.03);
     SC_vs_time_raw[6]->GetXaxis()->SetNdivisions(-507);
     SC_vs_time_raw[6]->GetYaxis()->SetTitle("Nombre moyen d'admissions par jour");
+    if (var>=4)
+        SC_vs_time_raw[6]->GetYaxis()->SetTitle("Nombre moyen de décès par jour ");
+    
     SC_vs_time_raw[6]->SetTitleSize(0.035);
     SC_vs_time_raw[6]->SetMarkerStyle(20);
     SC_vs_time_raw[6]->Draw();
@@ -728,6 +761,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
     SC_vs_time_raw[7]->GetYaxis()->SetLabelSize(0.03);
     SC_vs_time_raw[7]->GetXaxis()->SetNdivisions(-507);
     SC_vs_time_raw[7]->GetYaxis()->SetTitle("Nombre moyen d'admissions par jour");
+    if (var>=4)
+        SC_vs_time_raw[7]->GetYaxis()->SetTitle("Nombre moyen de décès par jour ");
     SC_vs_time_raw[7]->SetTitleSize(0.035);
     SC_vs_time_raw[7]->SetMarkerStyle(20);
     SC_vs_time_raw[7]->Draw();
@@ -777,6 +812,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
       SC_vs_time[7]->GetYaxis()->SetLabelSize(0.03);
       SC_vs_time[7]->GetXaxis()->SetNdivisions(-507);
       SC_vs_time[7]->GetYaxis()->SetTitle("Taux moyen d'admissions par jour (par millions d'habitants)");
+      if (var>=4)
+          SC_vs_time[7]->GetYaxis()->SetTitle("Taux moyen de deces par jour (par millions d'habitants)");
       SC_vs_time[7]->SetTitleSize(0.035);
       SC_vs_time[7]->SetMarkerStyle(20);
       SC_vs_time[7]->Draw();
