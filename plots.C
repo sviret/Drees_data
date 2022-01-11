@@ -30,6 +30,7 @@
 #include <iomanip>
 #include <cmath>
 #include <fstream>
+#include <random>
 
 // Fonction pour trier un vecteur de paires en fonction du premier paramètre
 bool myComparison(const pair<double,double> &a,const pair<double,double> &b)
@@ -287,12 +288,13 @@ void write(const TString& filename)
      3 = [20,39]
      4 = [60,79]
      
-     Peuvent changer selon le fichier csv à mettre au point
      */
     
-    int vac_code[9]={7,3,5,6,8,2,4,1,0};
-    int age_code[5]={2,3,0,4,1};
-        
+    //int vac_code[9]={3,6,5,8,7,2,4,1,0};
+    //int age_code[5]={3,0,4,1,2};
+    int vac_code[9]={0,1,2,3,4,5,6,7,8};
+    int age_code[5]={0,1,2,3,4};
+    
     ifstream in(filename);
     if (!in) return;
     
@@ -339,7 +341,62 @@ void write(const TString& filename)
      
 }
 
+void write_VACSI(const TString& filename)
+{
+    TFile hfile("vaxsi.root","RECREATE","");
+    TTree *tree = new TTree("VacsiData","");
 
+    double date=0;
+    double age=0;
+    double d1=0;
+    double d2=0;
+    double d3=0;
+    
+    tree->Branch("date_o",&date,"date_o/D");  // Date (en secondes)
+    tree->Branch("age_o",&age,"age_o/D");     // Classe d'age
+    tree->Branch("d1_o",&d1,"d1_o/D");        //
+    tree->Branch("d2_o",&d2,"d2_o/D");        //
+    tree->Branch("d3_o",&d3,"d3_o/D");        //
+        
+    ifstream in(filename);
+    if (!in) return;
+    
+    int ages=15;
+    int evtlength=4;
+    int compt=0;
+    std::string line;
+    
+    // Read the text file to retrieve the parameters
+    while (std::getline(in, line))
+    {
+        if (compt==0)
+        {
+            in >> date;
+            ++compt;
+            cout << date << endl;
+        }
+        else
+        {
+
+         
+            in >> age;
+            in >> d1;
+            in >> d2;
+            in >> d3;
+            ++compt;
+
+            cout << compt << " / " << age << endl;
+            tree->Fill();
+        }
+        if (compt==(ages)+1) compt=0;
+    }
+    
+    tree->Write();
+    in.close();
+    hfile.Write();
+    hfile.Close();
+     
+}
 //
 // Fonction réalisant l'analyse des données
 //
@@ -890,3 +947,492 @@ void read(std::string filename, float minbycat, int ndays, int var)
 
 
 
+void compare(std::string filedrees, std::string filevacsi)
+{
+    double date_d;
+    double age_d;
+    double vac_d;
+    double pop_d;
+  
+    double date_v;
+    double age_v;
+    double d1_v;
+    double d2_v;
+    double d3_v;
+            
+    TChain *drees = new TChain("DreesData");
+    TChain *vacsi = new TChain("VacsiData");
+
+    drees->Add(filedrees.c_str());
+    drees->SetBranchAddress("date_o",&date_d);
+    drees->SetBranchAddress("age_o",&age_d);
+    drees->SetBranchAddress("vac_o",&vac_d);
+    drees->SetBranchAddress("pop_o",&pop_d);
+
+    vacsi->Add(filevacsi.c_str());
+    vacsi->SetBranchAddress("date_o",&date_v);
+    vacsi->SetBranchAddress("age_o",&age_v);
+    vacsi->SetBranchAddress("d1_o",&d1_v);
+    vacsi->SetBranchAddress("d2_o",&d2_v);
+    vacsi->SetBranchAddress("d3_o",&d3_v);
+    
+    int nentries_d=drees->GetEntries();
+    int nentries_v=vacsi->GetEntries();
+ 
+    TFile hfile("comparaison.root","RECREATE","");
+    TTree *tree = new TTree("DrevsVac","");
+
+    double date=0;
+    double age=0;
+    double pop=0;
+    
+    tree->Branch("date",&date,"date/D");  // Date (en secondes)
+    tree->Branch("age",&age,"age/D");     // Classe d'age
+    tree->Branch("pop",&pop,"pop/D");     // Population dans la catégorie (en millions)
+      
+    std::vector<std::vector<std::pair<double, double> > > totaldata;
+    std::vector<std::vector<std::pair<double, double> > > totaldata_fix;
+    std::vector<std::pair<double, double> > SCdate;
+    std::pair<double, double> couple;
+
+    totaldata.clear();
+    totaldata_fix.clear();
+    SCdate.clear();
+    
+    for (int i=0;i<50;++i)
+    {
+        totaldata.push_back(SCdate);
+        totaldata_fix.push_back(SCdate);
+    }
+     
+      
+    //
+    // Deuxième boucle sur les données, on collecte et on met en forme
+    //
+      
+    /*
+    Categories drees (45 catégories)
+     
+    --> Statut vaccinal (vac)
+     
+     0 = Complet de 6 mois et plus - avec rappel
+     1 = Complet de 6 mois et plus - sans rappel
+     2 = Complet de moins de 3 mois - avec rappel
+     3 = Complet de moins de 3 mois - sans rappel
+     4 = Complet entre 3 mois et 6 mois - avec rappel
+     5 = Complet entre 3 mois et 6 mois - sans rappel
+     6 = Non-vaccinés
+     7 = Primo dose efficace
+     8 = Primo dose récente
+     
+     --> Tranche d'age
+     
+     0 = [40,59]
+     1 = [80+]
+     2 = [0,19]
+     3 = [20,39]
+     4 = [60,79]
+
+     
+     // On transforme çà pour coller au fichier vacsi
+     //
+     
+     0-> Statut d1 (1 dose)  : 0 à 8 sans 6
+     1-> Statut d2 (2 doses) : 0 à 5
+     2-> Statut d3 (3 doses) : 0/2/4
+     
+     0-> [0,39]  : 2,3
+     1-> [40,59] : 0
+     2-> [60,79] : 4
+     3-> [80,+]  : 1
+     4-> Tous les ages
+     
+     Dans le fichier de sortie total_data, ça se classe de la façon suivante
+     
+     10*age+statut
+     
+     */
+
+    int age_rge_d[5]={1,3,0,0,2};
+    
+    for (int i=0;i<nentries_d;++i)
+    {
+      drees->GetEntry(i);
+      if (vac_d==6) continue;
+      //if (vac_d==8) continue;
+        
+      //couple.first=date_d-15*86400;
+      couple.first=date_d-86400;
+      couple.second=pop_d;
+        
+      totaldata[int(10*age_rge_d[int(age_d)])].push_back(couple);
+      totaldata[40].push_back(couple);
+    
+      if (int(vac_d)>5) continue;
+      couple.first=date_d-8*86400; // La drees attend 7 jour avant de déclarer la dose efficace.
+      totaldata[int(10*age_rge_d[int(age_d)])+1].push_back(couple);
+      totaldata[41].push_back(couple);
+        
+      if (int(vac_d)%2==1) continue;
+      totaldata[int(10*age_rge_d[int(age_d)])+2].push_back(couple);
+      totaldata[42].push_back(couple);
+    }
+
+    
+    /*
+     Categories vacsi (45 catégories)
+   
+     --> Statut vaccinal (vac)
+   
+     d0 = Une injection
+     d1 = Deux injections
+     d2 = Rappel
+   
+     --> Tranche d'age
+   
+     0 = Tout
+     4 = [0,4]
+     9 = [5,9]
+    11= [10,11]
+    17= [12,17]
+    24= [18,24]
+    29= [25,29]
+    39= [30,39]
+    49= [40,49]
+    59= [50,59]
+    64= [60,64]
+    69= [65,69]
+    74= [70,74]
+    79= [75,79]
+    80= [80,+]
+     
+     Devient:
+     0-> [0,39]  : 4,9,11,17,24,29,39
+     1-> [40,59] : 49,59
+     2-> [60,79] : 64,69,74,79
+     3-> [80,+]  : 80
+     
+     
+     Dans le fichier de sortie total_data, ça se classe de la façon suivante
+     
+     10*age+statut+3
+     
+     */
+
+    int age_idx;
+    
+  for (int i=0;i<nentries_v;++i)
+  {
+    vacsi->GetEntry(i);
+    if (age_v==0) continue;
+      
+    age_idx=3;
+    if (age_v<=39) age_idx=0;
+    if (age_v>39 && age_v<=59) age_idx=1;
+    if (age_v>60 && age_v<=79) age_idx=2;
+      
+    couple.first=date_v;
+    couple.second=d1_v/1e6;
+    
+    totaldata[int(10*age_idx)+3].push_back(couple);
+    totaldata[43].push_back(couple);
+    
+    couple.second=d2_v/1e6;
+    totaldata[int(10*age_idx)+4].push_back(couple);
+    totaldata[44].push_back(couple);
+        
+    couple.second=d3_v/1e6;
+    totaldata[int(10*age_idx)+5].push_back(couple);
+    totaldata[45].push_back(couple);
+  }
+    
+  // Ici on classe tout par date dans le fichier total_data_fix
+  // Comme on a réuni plusieurs strates de chacun des fichiers,
+  // Il est en effet possible qu'il y ait plusieurs entrées pour une date donnée
+  // On fait la somme des populations
+  //
+  // Donc:
+  // --> Chaque case de total_data contient le nombre de vaccines d'une classe d'age donnée
+  // --> Chaque case de total_data_fix contient le nombre de vaccines d'une classe d'age donnée, groupés par date
+
+    
+  double datetmp,poptot,dateprev;
+    
+  for (int i=0;i<50;++i)
+  {
+    if (totaldata[i].size()==0) continue;
+    sort(totaldata[i].begin(), totaldata[i].end(), myComparison);
+    
+    // On tourne sur totaldata
+    for (int j=0;j<totaldata[i].size();++j)
+    {
+        datetmp=totaldata[i][j].first;
+        
+        if (j==0) // Init
+        {
+            dateprev=totaldata[i][j].first; // Date
+            poptot=totaldata[i][j].second;  // Nombre de vaccinés ds la strate
+        }
+        else
+        {
+            if (datetmp==dateprev) // On a déjà cette date, on somme
+            {
+                poptot+=totaldata[i][j].second;
+            }
+            else // On créer une entrée pour cette date
+            {
+                date=dateprev;
+                age=i;
+                pop=poptot;
+                couple.first=date;
+                
+                // On veut qd même garder des dates différentes pour faire la
+                // comparaison vacsi/drees, donc on ajoute 10 secondes aux données
+                // vacsi (reste le même jour mais date distincte de drees du coup...)
+                if (i%10>2) couple.first=date+10;
+                
+                couple.second=poptot;
+                totaldata_fix[i].push_back(couple);
+                tree->Fill();
+                dateprev=datetmp; // Total_data[i] est classé par date donc ça marche comme ça
+                poptot=totaldata[i][j].second;
+             }
+        }
+    }
+      
+    // La dernière entrée.
+    date=dateprev;
+    age=i;
+    pop=poptot;
+    couple.first=date;
+    if (i%10>2) couple.first=date+10;
+    couple.second=poptot;
+    totaldata_fix[i].push_back(couple);
+    tree->Fill();
+    
+  }
+
+  //
+  // Dans la dernière boucle on fait la comparaison VACSI-Drees
+  //
+  // Dans le fichier de sortie total_data, ça se classe de la façon suivante
+  //
+  //  10*age+statut+6
+  //
+    
+  for (int i=0;i<5;++i)  // Boucle sur les classes d'âges
+  {
+      for (int j=0;j<3;++j)  // Boucle sur le statut vaccinal
+      {
+          // Si pas de données vacsi ou drees on bache (pas de comparaison possible)
+          if (totaldata_fix[10*i+j+3].size()==0) continue; // VACsi
+          if (totaldata_fix[10*i+j].size()==0) continue;   // Drees
+                     
+          SCdate.clear();
+          
+          // On stocke tout dans un vecteur temporaire
+          for (int k=0;k<totaldata_fix[10*i+j+3].size();++k)
+              SCdate.push_back(totaldata_fix[10*i+j+3][k]);
+              //totaldata_fix[10*i+j].push_back(totaldata_fix[10*i+j+3][k]);
+
+          for (int k=0;k<totaldata_fix[10*i+j].size();++k)
+              SCdate.push_back(totaldata_fix[10*i+j][k]);
+          
+          // On classe par date (sachant que les dates Drees et VACsi on été différenciées)
+          sort(SCdate.begin(), SCdate.end(), myComparison);
+        
+          for (int k=0;k<SCdate.size();++k)
+          {
+              datetmp=SCdate[k].first;
+        
+              if (k==0)
+              {
+                  dateprev=SCdate[k].first;
+                  poptot=SCdate[k].second;
+              }
+              else
+              {
+                  if (datetmp==dateprev+10)
+                  {
+                      date=dateprev;
+                      age=10*i+j+6;
+                      pop=SCdate[k].second - poptot;
+                      tree->Fill();
+                      //cout << datetmp << " /// " << totaldata_fix[0][j].second  << " / "
+                      //<< " / " << poptot << " / "  << totaldata_fix[0][j].second - poptot << endl;
+                  }
+                  else
+                  {
+                      dateprev=datetmp;
+                      poptot=SCdate[k].second;
+                  }
+              }
+          }
+      }
+  }
+      
+  tree->Write();
+  hfile.Write();
+  hfile.Close();
+}
+
+/*
+ Test du biais introduit par l'appariement de la Drees
+ 
+ mpop       : population maximale par strate pour un test
+ pairing_acc: efficacité de l'appariement moyenne (entre 0 et 1).
+ vac_rate   : taux de vaccination moyen (entre 0 et 1)
+ sc_ratio   : rapport théorique du risque non-vax/antivax
+ nexp       : nombre de tests
+ */
+
+void checkbias(int mpop, double pairing_acc, double vac_rate, double sc_ratio,int nexp)
+{
+    TH1F *ratio  = new TH1F("","", 100,sc_ratio*0.5,sc_ratio*1.5);
+    TH1F *pull  = new TH1F("","", 200,-50,50);
+    TH2F *pull_vs_pop  = new TH2F("","", 1000,0,2000, 1000,-100,100);
+    std::default_random_engine generator;
+    std::normal_distribution<double> distribution(1.0,0.05);
+    std::normal_distribution<double> distribution_vac(1.0,0.02);
+    std::normal_distribution<double> distribution_pop(1.0,0.2);
+    
+    double number,samplepop;
+    double smear_acc,smear_vac;
+    int apparie,nonapparie;
+    double vax,nvax,vaxlim;
+    double vax_na,nvax_na;
+    
+    double totvax=0;    // Nombre total de vaccinés estimé
+    double totnvax=0;   // Nombre total de non-vaccinés estimé
+    double totvax_r=0;  // Nombre total de vaccinés réel
+    double totnvax_r=0; // Nombre total de non-vaccinés réel
+    
+    //
+    // C'est un toy model, donc on refai n fois la même experience
+    // pour voir l'effet que ça a sur le biais
+    //
+    
+    for (int k=0;k<nexp;++k)
+    {
+        // Remise à 0 des compteurs
+        totvax=0;
+        totnvax=0;
+        totvax_r=0;
+        totnvax_r=0;
+        
+        int pop=rand()%mpop;
+        if (pop<2) continue;
+        // On boucle sur 100 strates (eg 100 départements)
+        
+        for (int i=0;i<100;++i)
+        {
+            // L'efficacité de l'appairement peu varier d'une strate à l'autre
+            // Variation gaussienne centrée sur pairing_acc et de largeur 5%
+            number = distribution(generator);
+            smear_acc = number*pairing_acc; // Nouveau taux d'appariement
+            if (smear_acc<0) smear_acc=0;
+            if (smear_acc>1) smear_acc=1;
+
+            // Le taux de vaccination peu varier d'une strate à l'autre
+            // Variation gaussienne centrée sur vac_rate et de largeur 2% (correct pour une classe d'age)
+            number = distribution_vac(generator);
+            smear_vac = number*vac_rate;  // Nouveau taux de vaccination
+            if (smear_vac<0) smear_vac=0;
+            if (smear_vac>1) smear_vac=1;
+        
+            // Population de la strate. On prend un nombre aléatoire entre 0 et pop
+            //number = distribution_pop(generator);
+            //samplepop = number*pop;
+            samplepop=rand()%pop;
+            if (samplepop<=0) continue; // Une strate vide n'est pas prise en compte (note Drees)
+        
+            // On peut alors calculer le nombre de cas appariés pour la strate
+            apparie=int(samplepop*smear_acc);
+            if (apparie==0) continue; // Une strate vide n'est pas prise en compte (note Drees)
+            nonapparie=samplepop-apparie;
+
+            //std::cout << " Population de la strate " << i << " : " << samplepop << std::endl;
+            //std::cout << " Nbre de cas appariés : " << apparie << std::endl;
+
+            // On peut calculer le nombre de vax théorique dans le lot apparié:
+            vax=0;
+            vax_na=0;
+            
+            vaxlim=double(apparie)/(1+sc_ratio*(1/smear_vac-1))+rand()%2;
+                
+            // On génere des cas de manière aléatoire, basé sur cette limite théorique
+            // Pour avoir un nombre de cas vax/nvax dans le lot apparié
+            for (int j=0;j<apparie;++j)
+            {
+                //if (rand()%1000)/1000<((smear_vac/(1-smear_vac))/sc_ratio)) vax+=1;
+                if (rand()%apparie<int(vaxlim)) vax+=1;
+            }
+        
+            nvax=apparie-vax;
+            
+            // Idem pour le lot non apparié
+            vaxlim=double(nonapparie)/(1+sc_ratio*(1/smear_vac-1))+rand()%2;
+            for (int j=0;j<nonapparie;++j)
+            {
+                //if (rand()%1000)/1000<((smear_vac/(1-smear_vac))/sc_ratio)) vax+=1;
+                if (rand()%nonapparie<int(vaxlim)) vax_na+=1;
+            }
+
+            nvax_na=nonapparie-vax_na;
+        
+            // Maintenant on fait la pondération de la Drees et on
+            // compare ça au résulat théorique
+            double pond=double(samplepop)/double(apparie);
+        
+            totvax+=vax*pond;
+            totnvax+=nvax*pond;
+            
+            totvax_r+=vax+vax_na;
+            totnvax_r+=nvax+nvax_na;
+            
+            //std::cout << " Repartition estimée de la strate   " << vax*pond << " / " << nvax*pond << std::endl;
+            //std::cout << " Repartition théorique de la strate " << vax+vax_na << " / " << nvax+nvax_na << std::endl;
+            
+            //double rth = ((nvax+nvax_na)/(1-smear_vac))/((vax+vax_na)/smear_vac);
+            //double rexp= (nvax*pond/(1-smear_vac))/(vax*pond/smear_vac);
+            
+            //std::cout << " Ratios de la strate " << rth << " / " << rexp << std::endl;
+        }
+        
+        ratio->Fill((totnvax/(1-vac_rate))/(totvax/vac_rate));
+        std::cout << totvax << " // " << totnvax << " // " << (totnvax/(1-vac_rate))/(totvax/vac_rate) << std::endl;
+        std::cout << totvax_r << " $$ " << totnvax_r << " $$ " << (totnvax_r/(1-vac_rate))/(totvax_r/vac_rate) << std::endl;
+        
+        pull->Fill(100*((totnvax/(1-vac_rate))/(totvax/vac_rate)-(totnvax_r/(1-vac_rate))/(totvax_r/vac_rate))/((totnvax_r/(1-vac_rate))/(totvax_r/vac_rate)));
+        pull_vs_pop->Fill(totnvax_r+totvax_r,100*((totnvax/(1-vac_rate))/(totvax/vac_rate)-(totnvax_r/(1-vac_rate))/(totvax_r/vac_rate))/((totnvax_r/(1-vac_rate))/(totvax_r/vac_rate)));
+    }
+    
+    
+    TCanvas *c10 = new TCanvas("c10","Rapport n_vax/vax",451,208,1208,604);
+    c10->SetFillColor(0);
+    c10->SetBorderMode(0);
+    c10->SetBorderSize(2);
+    c10->SetLogz(1);
+    c10->SetLeftMargin(0.08);
+    c10->SetFrameBorderMode(0);
+    c10->SetFrameBorderMode(0);
+    
+    ratio->GetXaxis()->SetTitle("Rapport nonvax/vax");
+    ratio->Draw();
+    c10->Update();
+    //sprintf(buffer,"Average_admission_vs_age_overall_%d.png",var);
+    //c10->SaveAs(buffer);
+        
+    TCanvas *c11 = new TCanvas("c10","Erreur",451,208,1208,604);
+    c11->SetFillColor(0);
+    c11->SetBorderMode(0);
+    c11->SetBorderSize(2);
+    c11->SetLogz(1);
+    c11->SetLeftMargin(0.08);
+    c11->SetFrameBorderMode(0);
+    c11->SetFrameBorderMode(0);
+        
+    pull_vs_pop->GetYaxis()->SetTitle("Erreur (en %)");
+    pull_vs_pop->Draw("");
+    c11->Update();
+}

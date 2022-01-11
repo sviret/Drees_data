@@ -3,6 +3,31 @@ Macro de mise en forme du tableau csv de la Drees
 
 Génére un fichier texte contenant seulement les valeurs numériques
 nécessaires, et dans un format qui permet de génerer facilement un fichier ROOT
+
+    Categories (45 catégories)
+     
+    --> Statut vaccinal (vac)
+     
+     0 = Complet de 6 mois et plus - avec rappel
+     1 = Complet de 6 mois et plus - sans rappel
+     2 = Complet de moins de 3 mois - avec rappel
+     3 = Complet de moins de 3 mois - sans rappel
+     4 = Complet entre 3 mois et 6 mois - avec rappel
+     5 = Complet entre 3 mois et 6 mois - sans rappel
+     6 = Non-vaccinés
+     7 = Primo dose efficace  // Pas consideré
+     8 = Primo dose récente   // Pas consideré
+     
+     --> Tranche d'age
+     
+     0 = [40,59]
+     1 = [80+]
+     2 = [0,19]               // Pas consideré
+     3 = [20,39]
+     4 = [60,79]
+     
+     Peuvent changer selon le fichier csv à mettre au point
+
 '''
 
 import sys, getopt
@@ -38,16 +63,25 @@ data = inFile.readlines()
 
 treated_data=[]
 data_by_date=[]
-vac_status=[]
-age_range=[]
+vac_status=['Complet de 6 mois et plus - avec rappel','Complet de 6 mois et plus - sans rappel','Complet de moins de 3 mois - avec rappel','Complet de moins de 3 mois - sans rappel','Complet entre 3 mois et 6 mois - avec rappel','Complet entre 3 mois et 6 mois - sans rappel','Non-vaccinés','Primo dose efficace','Primo dose récente']
+age_range=['[40,59]','[80,+]','[0,19]','[20,39]','[60,79]']
+
+
 dates=[]
 for line in data:
 
     info=line.split(';')
     if info[0]=='date': # Skip the first line
         continue
+      
+    # La Drees ne donne pas toujours la date avec le meme format...
+    
+    thedate=''
+    if '/' not in info[0]:
+        thedate=datetime.strptime(info[0], "%Y-%m-%d")
+    else:
+        thedate=datetime.strptime(info[0], "%d/%m/%Y")
         
-    thedate=datetime.strptime(info[0], "%Y-%m-%d")
     mydate=time.mktime(thedate.timetuple())
     
     if mydate not in dates:
@@ -65,8 +99,10 @@ for line in data:
     age=info[2]
     if type not in vac_status:
         vac_status.append(type)
+        print('Uh, new vac status, strange'+type)
     if age not in age_range:
         age_range.append(age)
+        print('Uh, new age range, strange'+age)
         
     idx_vax=vac_status.index(type)
     idx_age=age_range.index(age)
@@ -87,7 +123,7 @@ for line in data:
     
     # Normalisation par millions d'habitants
     # On supprime dès le départ les points avec mons de 10000 personnes
-    if float(info[13])>=10000:
+    if float(info[13])>=0:
         HO=float(info[7])/(float(info[13])/1000000.)
         HOPCR=float(info[8])/(float(info[13])/1000000.)
         SC=float(info[9])/(float(info[13])/1000000.)
