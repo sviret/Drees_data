@@ -234,6 +234,88 @@ void doRatioPlot(const std::vector<pair<double,double> > *data,const std::vector
 }
 
 //
+// Fonction calculant la différence de valeur sans vaccination
+// et l'évolution de la différence
+//
+
+void doCalculation(const std::vector<pair<double,double> > *data,const std::vector<pair<double,double> > *datan,
+                 TH2F *histo, double tmin)
+{
+    double sum   = 0;
+    double mtime = 0;
+    double sum_nvac   = 0;
+    double mult_nvac = 0;
+    
+    double ncases=0;
+    double npop=0;
+    double ncases2=0;
+    double npop2=0;
+    double date,SC,mult,SC2,mult2;
+    double date_prev=-1;
+    // On commence par collecter les données pour les vaccinés
+    for(int  i = 0; i < int(data->size()); ++i)
+    {
+        date=data->at(i).first;
+        //std::cout << date << std::endl;
+        
+        if (i!=0 && date!=date_prev)
+        {
+            for(int j = 0; j < int(datan->size()); ++j)
+            {
+                if (datan->at(j).first!=date_prev) continue;
+                
+                mult2=long(datan->at(j).second/1000.);
+                SC2=datan->at(j).second-mult2*1000;
+                if (SC2>=999) SC2=SC2-1000.; // Minor rouding bug I suppose
+                
+                mult2=float(mult2)/1e9;
+                
+                
+                ncases2+=SC2*mult2;
+                npop2+=mult2;
+                
+            }
+            
+            sum+=ncases2+ncases;
+            sum_nvac+=ncases2*(npop+npop2)/npop2;
+            //std::cout << date << " / " << sum_nvac-sum << std::endl;
+            //std::cout << npop+npop2 << " /// " << npop2 << std::endl;
+            
+            histo->Fill(date_prev,sum_nvac-sum);
+            
+            ncases=0;
+            npop=0;
+            ncases2=0;
+            npop2=0;
+        }
+            
+        date_prev=date;
+        
+        mult=long(data->at(i).second/1000.);
+        SC=data->at(i).second-mult*1000;
+        if (SC>=999) SC=SC-1000.; // Minor rounding bug I suppose
+            
+        mult=float(mult)/1e9;
+
+        ncases+=SC*mult;
+        npop+=mult;
+
+    }
+
+    std::cout << " Gain total = " << sum_nvac-sum << std::endl;
+    
+ /*
+        // Remplissage des histos
+        histo->Fill(mtime,nonvac/vac);
+        historaw->Fill(mtime,nonvacraw/vacraw);
+        histo2->Fill(mtime,age,nonvac/vac);
+        histo2raw->Fill(mtime,age,nonvacraw/vacraw);
+    */
+}
+
+
+
+//
 // Fonction générant un fichier root contenant toutes les données utiles
 // à partir du fichier texte produit par la macro python de parsing
 //
@@ -496,6 +578,7 @@ void read(std::string filename, float minbycat, int ndays, int var)
   std::vector<TH2F* > SC_vs_time_raw;
   std::vector<TH2F* > Ratio_vs_time;
   std::vector<TH2F* > Ratio_vs_time_raw;
+  //std::vector<TH2F* > Gain_vs_time;
     
   std::vector<std::vector<std::pair<double, double> > > totaldata;
   std::vector<std::pair<double, double> > SCdate;
@@ -504,20 +587,24 @@ void read(std::string filename, float minbycat, int ndays, int var)
 
   for (int i=0;i<50;++i)
   {
-      TH2F *aplotxy  = new TH2F("example plot 2Da","a",  2*npts_r,tmin,tmaxreal, 100,0.,1.1*valmax);
+      TH2F *aplotxy  = new TH2F("example plot 2Da","a", 2*npts_r,tmin,tmaxreal, 100,0.,1.1*valmax);
       TH2F *raw      = new TH2F("example plot 2Db","b", 2*npts_r,tmin,tmaxreal, 200,0.,1.1*rawvalmax);
       TH2F *ratio    = new TH2F("example plot 1Dc","c", 2*npts_r,tmin,tmaxreal,400,0.,40.);
       TH2F *ratior   = new TH2F("example plot 1Dd","d", 2*npts_r,tmin,tmaxreal,250,0.,25.);
+     
       
       SC_vs_time.push_back(aplotxy);
       SC_vs_time_raw.push_back(raw);
       Ratio_vs_time.push_back(ratio);
+      //Gain_vs_time.push_back(ratiofg);
       Ratio_vs_time_raw.push_back(ratior);
       totaldata.push_back(SCdate);
   }
    
-  TH2F *Ratio_vs_age    = new TH2F("example plot 2Dd","d", ndays*(npts+1),tmin,tmax, 4,20.,100);
-  TH2F *Ratioraw_vs_age = new TH2F("example plot 2De","e", ndays*(npts+1),tmin,tmax, 4,20.,100);
+  TH2F *Ratio_vs_age    = new TH2F("example plot 2Dd","h", ndays*(npts+1),tmin,tmax, 4,20.,100);
+  TH2F *Ratioraw_vs_age = new TH2F("example plot 2De","i", ndays*(npts+1),tmin,tmax, 4,20.,100);
+    
+  TH2F *ratiofg        = new TH2F("example plot 1De","e", 2*npts_r,tmin,tmaxreal,400,0.,200000.);
     
   //
   // Deuxième boucle sur les données, on collecte et on met en forme
@@ -526,9 +613,9 @@ void read(std::string filename, float minbycat, int ndays, int var)
   for (int i=0;i<nentries;++i)
   {
     newtree->GetEntry(i);
-    if (vac>6) continue;
+    if (vac>6) continue;   // On ne considère pas les primo-doses
     if (pop<=minbycat) continue;
-    if (age==2) continue;  // Catégorie pas étudiée
+    if (age==2) continue;  // Catégorie des [0-19] pas étudiée
     
     couple.first=date;
     couple.second=val+1e12*pop;
@@ -565,7 +652,8 @@ void read(std::string filename, float minbycat, int ndays, int var)
   for (int i=0;i<5;++i)
       doRatioPlot(&totaldata[10*i+7],&totaldata[10*i+6],Ratio_vs_time[i],Ratio_vs_time_raw[i],age_r[i],Ratio_vs_age,Ratioraw_vs_age,tmin,tmax,ndays);
 
-   doRatioPlot(&totaldata[8],&totaldata[9],Ratio_vs_time[8],Ratio_vs_time_raw[8],-10,Ratio_vs_age,Ratioraw_vs_age,tmin,tmax,ndays);
+    doRatioPlot(&totaldata[8],&totaldata[9],Ratio_vs_time[8],Ratio_vs_time_raw[8],-10,Ratio_vs_age,Ratioraw_vs_age,tmin,tmax,ndays);
+    doCalculation(&totaldata[8],&totaldata[9],ratiofg,tmin);
   //
   // Les plots sont finis on fait la cosmétique
   //
@@ -943,6 +1031,38 @@ void read(std::string filename, float minbycat, int ndays, int var)
     c10->Update();
     sprintf(buffer,"Average_admission_vs_age_overall_%d.png",var);
     c10->SaveAs(buffer);
+    
+    TCanvas *c11c = new TCanvas("c11c","Test",451,208,1208,604);
+    
+    c11c->SetFillColor(0);
+    c11c->SetBorderMode(0);
+    c11c->SetGridx();
+    c11c->SetGridy();
+    c11c->SetBorderSize(2);
+    c11c->SetLeftMargin(0.08);
+    c11c->SetFrameBorderMode(0);
+    c11c->SetFrameBorderMode(0);
+    
+    ratiofg->GetXaxis()->SetTimeDisplay(1);
+    ratiofg->GetXaxis()->SetTimeFormat("%d/%m/%Y");
+    ratiofg->GetXaxis()->SetTimeOffset(0,"gmt");
+    ratiofg->GetXaxis()->SetLabelOffset(0.015);
+    ratiofg->GetXaxis()->SetLabelSize(0.03);
+    ratiofg->GetYaxis()->SetLabelSize(0.03);
+    ratiofg->GetXaxis()->SetNdivisions(-507);
+    //ratiofg->GetYaxis()->SetRangeUser(0,20);
+    ratiofg->GetYaxis()->SetTitle("Nombre d'admissions evitees");
+    if (var>=4)
+        ratiofg->GetYaxis()->SetTitle("Nombre de deces evites");
+     
+    ratiofg->SetTitleSize(0.035);
+    ratiofg->SetMarkerStyle(20);
+    ratiofg->Draw();
+      
+    c11c->Update();
+    sprintf(buffer,"Admission_gain_overall_%d.png",var);
+    c11c->SaveAs(buffer);
+     
 }
 
 
